@@ -1,0 +1,16 @@
+FROM node:22-slim AS build
+WORKDIR /app
+COPY apps/dashboard/package.json apps/dashboard/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY apps/dashboard ./
+RUN npm run build
+
+FROM node:22-slim
+WORKDIR /app
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
+RUN useradd --system --uid 10002 web
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+USER web
+EXPOSE 3000
+CMD ["node", "server.js"]

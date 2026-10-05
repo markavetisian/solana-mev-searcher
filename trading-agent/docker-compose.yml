@@ -1,0 +1,58 @@
+# Local / single-host deployment. Default mode is PAPER. LIVE needs the explicit steps in docs/LIVE_EXECUTION.md.
+# Secrets come from .env (chmod 600, never committed). The wallet keypair, if any, is mounted read-only.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: trading_agent
+      POSTGRES_USER: trading
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading -d trading_agent"]
+      interval: 5s
+      retries: 20
+    # not published to the host network
+
+  migrate:
+    build: { context: ., dockerfile: docker/Dockerfile.python }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://trading:${POSTGRES_PASSWORD}@postgres:5432/trading_agent
+    command: ["ta", "migrate"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  worker:
+    build: { context: ., dockerfile: docker/Dockerfile.python }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://trading:${POSTGRES_PASSWORD}@postgres:5432/trading_agent
+    command: ["ta", "--config", "${TA_MODE_CONFIG:-config/paper.yaml}", "worker", "--source", "${TA_SOURCE:-ws}"]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    restart: unless-stopped
+    stop_grace_period: 90s   # lets in-flight transactions resolve and state flush
+    # volumes: ["/secure/path/trading-keypair.json:/run/secrets/wallet.json:ro"]  # LIVE/SHADOW only
+
+  api:
+    build: { context: ., dockerfile: docker/Dockerfile.python }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://trading:${POSTGRES_PASSWORD}@postgres:5432/trading_agent
+      TA__API__CORS_ORIGINS: '["http://localhost:3000"]'
+    command: ["ta", "api", "--host", "0.0.0.0", "--port", "8080"]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    ports: ["127.0.0.1:8080:8080"]
+    restart: unless-stopped
+
+  dashboard:
+    build: { context: ., dockerfile: docker/Dockerfile.dashboard }
+    environment:
+      TA_API_URL: http://api:8080
+      TA_API_READ_TOKEN: ${API_READ_TOKEN:?set API_READ_TOKEN}
+      DASHBOARD_BASIC_AUTH: ${DASHBOARD_BASIC_AUTH:?set DASHBOARD_BASIC_AUTH=user:password}
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  pgdata:

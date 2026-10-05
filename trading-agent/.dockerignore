@@ -1,0 +1,11 @@
+.venv
+**/__pycache__
+**/node_modules
+apps/dashboard/.next
+.env
+.env.*
+*.db
+data
+reports
+*.keypair.json
+id.json

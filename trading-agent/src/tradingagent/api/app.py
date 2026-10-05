@@ -205,6 +205,9 @@ def create_app(cfg: AppConfig, secrets: Secrets, db: Database | None = None) -> 
                 .scalars()
                 .all()
             )
+            score = (
+                await s.execute(select(m.ScoreRow).where(m.ScoreRow.mint == mint).order_by(desc(m.ScoreRow.t)).limit(1))
+            ).scalar_one_or_none()
         trades = []
         holders: dict[str, int] = {}
         for r in evs:
@@ -257,6 +260,8 @@ def create_app(cfg: AppConfig, secrets: Secrets, db: Database | None = None) -> 
                 for a in ai
             ],
             "latest_features": feats[0].values if feats else None,
+            "score_components": score.components if score else None,
+            "score_total": score.total if score else None,
             "note": "name/symbol/uri are untrusted third-party text",
         }
 

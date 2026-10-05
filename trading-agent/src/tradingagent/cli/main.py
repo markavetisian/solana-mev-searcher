@@ -80,6 +80,22 @@ async def _load_events(args: argparse.Namespace, cfg: AppConfig, secrets: Secret
         await db.close()
 
 
+def _json_safe(obj: object) -> object:
+    """JSON round-trip with NaN/inf -> None (PostgreSQL JSONB rejects non-finite numbers)."""
+    import math
+
+    def fix(x: object) -> object:
+        if isinstance(x, float) and not math.isfinite(x):
+            return None
+        if isinstance(x, dict):
+            return {str(k): fix(v) for k, v in x.items()}
+        if isinstance(x, list | tuple):
+            return [fix(v) for v in x]
+        return x
+
+    return fix(json.loads(json.dumps(obj, default=str)))
+
+
 async def _save_run(secrets: Secrets, kind: str, params: dict, results: dict) -> None:
     from tradingagent.storage import models as m
     from tradingagent.storage.db import Database, DatabaseUnavailable
@@ -98,7 +114,7 @@ async def _save_run(secrets: Secrets, kind: str, params: dict, results: dict) ->
             if kind == "research"
             else {"kind": kind, "params": params, "results": results}
         )
-        await db.write_now(table, json.loads(json.dumps(row, default=str)))
+        await db.write_now(table, _json_safe(row))
     except DatabaseUnavailable as e:
         print(f"warning: run not stored in database: {e}", file=sys.stderr)
     finally:

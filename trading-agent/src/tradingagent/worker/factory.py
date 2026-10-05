@@ -16,7 +16,7 @@ from tradingagent.execution.providers import (
     ShadowExecutionProvider,
 )
 from tradingagent.ingestion.parser import LogParser
-from tradingagent.ingestion.sources import EventSource, JsonlReplaySource, ListSource, WebSocketLogSource
+from tradingagent.ingestion.sources import EventSource, JsonlReplaySource, WebSocketLogSource
 from tradingagent.paper.runtime import TradingRuntime
 from tradingagent.solana.rpc import RpcPool
 from tradingagent.solana.tx import TransactionEngine, TxRecord
@@ -49,10 +49,15 @@ def build_source(
             raise SystemExit("--input is required for --source jsonl")
         return JsonlReplaySource(path)
     if kind == "synthetic":
+        import time
+
+        from tradingagent.ingestion.sources import PacedListSource
         from tradingagent.ingestion.synthetic import SyntheticMarket
 
         log.warning("synthetic_source", detail="SYNTHETIC DATA: demo/testing only, says nothing about real edge")
-        return ListSource(SyntheticMarket(seed=11, duration_s=3600, start_time=__import__("time").time()).generate())
+        now = time.time()
+        events = SyntheticMarket(seed=11, planted_edge=0.5, duration_s=7200, start_time=now - 900).generate()
+        return PacedListSource(events)
     raise SystemExit(f"unknown source {kind}")
 
 

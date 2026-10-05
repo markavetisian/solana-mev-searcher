@@ -130,6 +130,30 @@ class ListSource:
             yield ev
 
 
+class PacedListSource:
+    """Emits pre-built events in real time (events in the past are emitted immediately). Demo/testing only."""
+
+    def __init__(self, events: list[MarketEvent], speed: float = 1.0) -> None:
+        self._events = sorted(events, key=lambda e: e.order_key)
+        self.speed = speed
+        self.connected = True
+
+    @property
+    def staleness_s(self) -> float:
+        return 0.0
+
+    async def events(self) -> AsyncIterator[MarketEvent]:
+        import time
+
+        for ev in self._events:
+            delay = (ev.t - time.time()) / self.speed
+            if delay > 0:
+                await asyncio.sleep(delay)
+            if ev.observed_at > time.time():
+                ev.observed_at = time.time()
+            yield ev
+
+
 class JsonlArchiver:
     """Append-only raw event archive (one file per UTC day). Cheap insurance for research reproducibility."""
 
