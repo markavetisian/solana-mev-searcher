@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tradingagent"
+version = "0.1.0"
+description = "Quantitative research and execution system for Pump.fun / PumpSwap tokens with a constrained AI analysis layer."
+requires-python = ">=3.12"
+readme = "README.md"
+license = { text = "Proprietary" }
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "sqlalchemy[asyncio]>=2.0.30",
+  "asyncpg>=0.29",
+  "aiosqlite>=0.20",
+  "alembic>=1.13",
+  "httpx>=0.27",
+  "websockets>=13",
+  "solders>=0.21",
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "scipy>=1.13",
+  "redis>=5.0",
+  "pyyaml>=6.0",
+  "anthropic>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5", "mypy>=1.10"]
+
+[project.scripts]
+ta = "tradingagent.cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tradingagent"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/tradingagent/pump/idl" = "tradingagent/pump/idl"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+  "postgres: requires TA_TEST_POSTGRES_URL",
+  "redis: requires TA_TEST_REDIS_URL",
+]
+filterwarnings = ["ignore::DeprecationWarning:websockets.*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ASYNC", "S", "RUF"]
+ignore = [
+  "S101",   # asserts are used in tests and as internal invariants
+  "S311",   # random is used for simulation, never for keys
+  "RUF001", "RUF002", "RUF003",
+  "B008",
+  "S105",   # false positives on enum/constant names containing TOKEN
+  "RUF046", # explicit int() casts document intent at unit boundaries
+  "RUF007",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "B007", "RUF059", "RUF005", "RUF034", "ASYNC221", "E501"]
+"src/tradingagent/cli/**" = ["ASYNC230"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = false

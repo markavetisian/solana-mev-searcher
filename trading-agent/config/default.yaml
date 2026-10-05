@@ -1,0 +1,206 @@
+# Trading agent configuration (non-secret). Secrets live ONLY in environment variables (see .env.example).
+#
+# Every value here is an initial default, NOT a tuned optimum. The hash of the effective configuration
+# (`configuration_version`) is stamped on every decision, order and trade.
+#
+# Override per environment with additional files:   ta --config config/prod.yaml worker
+# or with environment variables:                      TA__RISK__MAX_DAILY_LOSS=0.03
+#
+# mode: RESEARCH | PAPER | SHADOW | LIVE   (LIVE additionally requires LIVE_TRADING_CONFIRM, a wallet, an admin
+#                                          API token and config/live_limits.yaml — see docs/LIVE_EXECUTION.md)
+mode: PAPER
+log_level: INFO
+solana: {commitment: confirmed, rpc_timeout_s: 8.0, rpc_max_retries_per_call: 2, rpc_circuit_open_after_errors: 5,
+  rpc_circuit_cooldown_s: 20.0, ws_ping_interval_s: 10.0, ws_stale_after_s: 20.0, ws_reconnect_max_backoff_s: 15.0,
+  subscribe_pumpswap: true}
+pump:
+  fee_tiers:
+  - [0, 2, 93, 30]
+  - [420000000000, 20, 5, 95]
+  - [1470000000000, 20, 5, 90]
+  - [2460000000000, 20, 5, 85]
+  - [3440000000000, 20, 5, 80]
+  - [4420000000000, 20, 5, 75]
+  - [9820000000000, 20, 5, 70]
+  - [14740000000000, 20, 5, 65]
+  - [19650000000000, 20, 5, 60]
+  - [24560000000000, 20, 5, 55]
+  - [29470000000000, 20, 5, 50]
+  - [34380000000000, 20, 5, 45]
+  - [39300000000000, 20, 5, 40]
+  - [44210000000000, 20, 5, 35]
+  - [49120000000000, 20, 5, 30]
+  - [54030000000000, 20, 5, 28]
+  - [58940000000000, 20, 5, 25]
+  - [63860000000000, 20, 5, 23]
+  - [68770000000000, 20, 5, 20]
+  - [73681000000000, 20, 5, 18]
+  - [78590000000000, 20, 5, 15]
+  - [83500000000000, 20, 5, 13]
+  - [88400000000000, 20, 5, 10]
+  - [93330000000000, 20, 5, 8]
+  - [98240000000000, 20, 5, 5]
+  flat_fees: [25, 5, 0]
+  refresh_onchain_fee_config_s: 600.0
+  initial_virtual_token_reserves: 1073000000000000
+  initial_virtual_sol_reserves: 30000000000
+  initial_real_token_reserves: 793100000000000
+  token_total_supply: 1000000000000000
+  allow_mayhem_mode: false
+  allow_non_sol_quote: false
+tracking: {max_tracked_tokens: 5000, evict_after_idle_s: 3600.0, dead_after_idle_s: 900.0, dead_below_liquidity_sol: 0.5,
+  active_after_pool_trades: 20, series_retention_s: 14400.0, snapshot_interval_s: 5.0, holder_enrichment_enabled: false,
+  holder_enrichment_min_interval_s: 30.0, funding_enrichment_enabled: false}
+filters:
+  min_liquidity_sol: 5.0
+  max_entry_price_impact: 0.04
+  max_expected_exit_slippage: 0.07
+  max_top10_concentration: 0.45
+  max_creator_holding: 0.08
+  reject_if_creator_sold_pct_over: 0.5
+  min_trades_60s: 8
+  min_unique_traders_300s: 15
+  min_volume_sol_300s: 3.0
+  max_data_staleness_s: 4.0
+  max_volatility_60s: 0.25
+  min_token_age_s: 20.0
+  max_token_age_s: 21600.0
+  reject_partial_history: true
+  max_same_slot_launch_buyers: 6
+  max_sniper_supply_share: 0.35
+  reject_metadata_injection: true
+  allowed_states: [BONDING_CURVE, PUMPSWAP, ACTIVE]
+  max_bonding_progress: 0.95
+  creator_suspicion_reject_confidence: 0.8
+scoring:
+  weights: {momentum: 0.2, volume: 0.15, flow: 0.15, holders: 0.1, liquidity: 0.1, wallets: 0.1, creator: 0.05,
+    volatility: 0.05, structure: 0.05, exit_quality: 0.05}
+  components:
+    momentum:
+    - {feature: ret_60s, lo: -0.05, hi: 0.25, weight: 0.5}
+    - {feature: ret_300s, lo: -0.1, hi: 0.6, weight: 0.3}
+    - {feature: persistence_60s, lo: 0.3, hi: 0.8, weight: 0.2}
+    volume:
+    - {feature: vol_accel_30s, lo: 0.8, hi: 3.0, weight: 0.5}
+    - {feature: buy_vol_accel_30s, lo: 0.8, hi: 3.0, weight: 0.3}
+    - {feature: vol_liq_ratio_300s, lo: 0.2, hi: 3.0, weight: 0.2}
+    flow:
+    - {feature: imbalance_60s, lo: -0.1, hi: 0.5, weight: 0.5}
+    - {feature: buyer_seller_ratio_60s, lo: 0.8, hi: 3.0, weight: 0.3}
+    - {feature: sell_burst_15s, lo: 3.0, hi: 0.0, weight: 0.2}
+    holders:
+    - {feature: holder_growth_60s, lo: 0.0, hi: 0.3, weight: 0.4}
+    - {feature: top10_share, lo: 0.45, hi: 0.15, weight: 0.4}
+    - {feature: holder_retention, lo: 0.3, hi: 0.9, weight: 0.2}
+    liquidity:
+    - {feature: liquidity_sol, lo: 5.0, hi: 60.0, weight: 0.5}
+    - {feature: liq_change_60s, lo: -0.1, hi: 0.3, weight: 0.5}
+    wallets:
+    - {feature: smart_wallet_buy_share_300s, lo: 0.0, hi: 0.3, weight: 0.6}
+    - {feature: whale_net_flow_300s, lo: -0.05, hi: 0.05, weight: 0.4}
+    creator:
+    - {feature: creator_holding, lo: 0.08, hi: 0.0, weight: 0.5}
+    - {feature: creator_prev_graduation_rate, lo: 0.0, hi: 0.2, weight: 0.5}
+    volatility:
+    - {feature: volatility_60s, lo: 0.2, hi: 0.02, weight: 1.0}
+    structure:
+    - {feature: hh_hl_score_60s, lo: 0.0, hi: 1.0, weight: 1.0}
+    exit_quality:
+    - {feature: exit_impact_frac, lo: 0.07, hi: 0.005, weight: 1.0}
+  missing_feature_score: 0.0
+regime:
+  window_s: 300.0
+  low_activity_trades_per_min: 200.0
+  high_momentum_median_ret: 0.05
+  risk_off_median_ret: -0.05
+  extreme_volatility_dispersion: 1.0
+  risk_on_up_fraction: 0.6
+  degraded_staleness_s: 10.0
+  overrides:
+    DEGRADED: {entries_enabled: false, size_multiplier: 1.0, min_score_add: 0.0, min_ev_multiplier: 1.0, max_hold_multiplier: 1.0}
+    LOW_ACTIVITY: {entries_enabled: true, size_multiplier: 0.5, min_score_add: 5.0, min_ev_multiplier: 1.0, max_hold_multiplier: 1.0}
+    NORMAL: {entries_enabled: true, size_multiplier: 1.0, min_score_add: 0.0, min_ev_multiplier: 1.0, max_hold_multiplier: 1.0}
+    HIGH_MOMENTUM: {entries_enabled: true, size_multiplier: 1.0, min_score_add: 0.0, min_ev_multiplier: 1.0, max_hold_multiplier: 1.0}
+    RISK_ON: {entries_enabled: true, size_multiplier: 1.0, min_score_add: 0.0, min_ev_multiplier: 1.0, max_hold_multiplier: 1.0}
+    RISK_OFF: {entries_enabled: true, size_multiplier: 0.5, min_score_add: 10.0, min_ev_multiplier: 1.5, max_hold_multiplier: 1.0}
+    EXTREME_VOLATILITY: {entries_enabled: true, size_multiplier: 0.25, min_score_add: 15.0, min_ev_multiplier: 2.0,
+      max_hold_multiplier: 0.5}
+strategy:
+  min_score: 70.0
+  min_expected_value_frac: 0.02
+  max_hold_s: 900.0
+  evaluation_cooldown_s: 3.0
+  reentry_cooldown_s: 600.0
+  hard_stop_frac: 0.15
+  take_profit_levels:
+  - [0.2, 0.33]
+  - [0.4, 0.33]
+  - [0.8, 1.0]
+  trailing_stop_frac: 0.12
+  trailing_activation_gain: 0.1
+  time_stop_s: 300.0
+  time_stop_min_gain: 0.05
+  thesis_imbalance_floor: -0.25
+  thesis_liquidity_drop_frac: 0.3
+  thesis_exit_on_creator_sell: true
+  exit_on_graduation: false
+  exit_check_interval_s: 1.0
+ev:
+  min_samples: 50
+  score_buckets: [0.0, 50.0, 60.0, 70.0, 80.0, 90.0, 101.0]
+  condition_on_regime: true
+  min_samples_regime: 30
+  confidence_z: 1.645
+  execution_risk_per_vol: 0.5
+  outcome_lookback_days: 30.0
+  use_strategy_version_prefix: pump-momentum-0.
+  outcome_source: any
+risk: {max_risk_per_trade: 0.01, max_position_pct: 0.05, max_portfolio_exposure: 0.25, max_daily_loss: 0.05, max_drawdown: 0.2,
+  max_open_positions: 5, max_liquidity_share: 0.02, min_position_sol: 0.02, min_wallet_balance_sol: 0.1, reserve_sol_for_fees: 0.02,
+  max_consecutive_losses_before_pause: 8, volatility_target_60s: 0.06}
+execution:
+  max_slippage_bps: 500
+  max_total_cost_frac: 0.06
+  compute_unit_limit: 150000
+  compute_unit_buffer: 1.15
+  priority_fee: {mode: percentile, static_micro_lamports: 200000, percentile: 75.0, min_micro_lamports: 10000, max_micro_lamports: 2000000,
+    max_priority_fee_lamports: 2000000}
+  simulation_required: true
+  confirm_timeout_s: 45.0
+  status_poll_interval_s: 0.8
+  max_send_attempts: 3
+  assumed_latency_s: 1.2
+  paper_failure_rate: 0.03
+  paper_extra_adverse_bps: 25.0
+  max_price_feed_divergence: 0.03
+paper: {starting_equity_sol: 10.0}
+ai: {enabled: false, required_for_entry: false, provider: anthropic, model: claude-opus-5-5, effort: low, timeout_s: 12.0,
+  max_tokens: 2000, server_side_fallback: true, max_calls_per_minute: 20, cache_ttl_s: 60.0, veto_on_negative: true,
+  veto_min_confidence: 0.7, max_metadata_chars: 200}
+alerts: {telegram_enabled: false, min_score_alert: 85.0, max_messages_per_minute: 20}
+killswitch: {max_execution_failures: 3, execution_failure_window_s: 600.0, max_abnormal_slippage_events: 3, abnormal_slippage_multiple: 2.0,
+  stale_data_kill_after_s: 60.0, rpc_degraded_kill_after_s: 120.0, db_error_kill_after: 5, balance_mismatch_tolerance_sol: 0.01,
+  emergency_exit_on_kill: false}
+storage: {batch_size: 500, flush_interval_s: 1.0, max_queue: 200000, persist_snapshots: true, persist_features: true,
+  jsonl_archive_dir: null}
+api:
+  host: 127.0.0.1
+  port: 8080
+  require_auth_for_reads: true
+  cors_origins: ['http://localhost:3000']
+  rate_limit_per_minute: 240
+  worker_heartbeat_stale_s: 10.0
+backtest:
+  evaluation_interval_s: 1.0
+  train_days: 7.0
+  test_days: 2.0
+  step_days: 2.0
+  min_test_trades: 30
+  bootstrap_samples: 2000
+  allow_synthetic: false
+  score_threshold_grid: [60.0, 70.0, 80.0]
+research:
+  label_horizons_s: [30, 60, 300, 900]
+  label_notional_sol: 0.5
+  min_samples: 200
+  candidate_min_trades_60s: 3

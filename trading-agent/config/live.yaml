@@ -1,0 +1,8 @@
+# LIVE is NOT enabled by this file alone. It also requires:
+#   LIVE_TRADING_CONFIRM=I_UNDERSTAND_REAL_FUNDS_ARE_AT_RISK, WALLET_KEYPAIR_PATH (dedicated wallet, chmod 600),
+#   SOLANA_RPC_URLS, API_ADMIN_TOKEN, and config/live_limits.yaml. See docs/LIVE_EXECUTION.md.
+mode: LIVE
+execution:
+  simulation_required: true
+risk:
+  max_open_positions: 2

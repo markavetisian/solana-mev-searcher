@@ -1,0 +1,13 @@
+# Independent LIVE-mode ceilings, owned by the operator. Applied as min(config, live_limits).
+# Nothing in the strategy or AI layer can modify this file or these values at runtime.
+max_position_sol: 0.1
+max_total_exposure_sol: 0.3
+max_daily_loss_sol: 0.15
+max_open_positions: 2
+max_slippage_bps: 500
+max_priority_fee_lamports: 1000000
+min_wallet_balance_sol: 0.1
+max_trades_per_hour: 6
+allowed_venues:
+- BONDING_CURVE
+- PUMPSWAP

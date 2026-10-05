@@ -1,0 +1,4 @@
+# Research mode: ingest + label + calibration, never any order flow.
+mode: RESEARCH
+storage:
+  persist_features: true
