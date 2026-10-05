@@ -1,0 +1,6 @@
+/target
+/tools/*/target
+*.enc
+id.json
+config.toml
+!config.example.toml

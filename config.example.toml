@@ -1,0 +1,57 @@
+# Copy to /etc/mev-searcher/config.toml. Secrets do NOT go here:
+#   GRPC_X_TOKEN        -> environment (EnvironmentFile) or grpc_x_token below
+#   keystore passphrase -> systemd credential "mev-key-passphrase" / MEV_KEY_PASSPHRASE / passphrase_file
+
+[network]
+grpc_endpoint = "https://your-yellowstone-endpoint:443"
+rpc_endpoint = "https://your-rpc-endpoint"
+# jito_endpoints = ["https://frankfurt.mainnet.block-engine.jito.wtf"]   # default: all 6 regions
+# jito_uuid = "..."              # raises the default 1 req/s/region limit
+jito_rps_per_endpoint = 1.0
+stream_stall_timeout_ms = 3000   # slots arrive every ~400ms; silence => dead stream => reconnect
+reconnect_base_delay_ms = 50     # first retry delay; doubles per consecutive failure, cap 2s
+
+[wallet]
+encrypted_keypair_path = "/etc/mev-searcher/key.enc"
+# passphrase_env = "MEV_KEY_PASSPHRASE"
+# passphrase_file = "/etc/mev-searcher/passphrase"
+
+[risk]
+min_balance_floor_sol = 2.0      # SOL + wSOL below this => kill switch, exit 42
+min_trade_sol = 0.05
+max_trade_sol = 2.0              # also capped by wSOL balance
+min_profit_lamports = 20000      # realised profit after tip + fees, enforced on-chain
+tip_bps = 7000                   # 70% of net profit to the validator
+min_tip_lamports = 1000
+slippage_bps = 50                # 0.5%: leg-3 min_out floor vs simulation
+intermediate_haircut_bps = 1
+compute_unit_limit = 500000
+compute_unit_price_micro_lamports = 0
+route_cooldown_ms = 400
+max_opportunity_age_ms = 150
+max_bundles_per_burst = 3
+dry_run = true                   # simulate via RPC, send nothing. Flip to false to go live.
+
+[engine]
+lookup_tables = []               # fill with the address printed by `searcher setup --create-alt`
+subscribe_transactions = false
+dlmm_bin_arrays_per_side = 3
+max_routes = 20000
+stats_interval_secs = 30
+blockhash_refresh_ms = 400
+balance_reconcile_secs = 5
+worker_threads = 4
+
+# Triangles are generated automatically: every wSOL -> A -> B -> wSOL cycle across these pools.
+# Unsupported pools (wrong owner, Token-2022 DLMM legs, bitmap-extension ranges) are skipped with a warning.
+[[pools]]
+address = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"   # Raydium v4 SOL/USDC
+kind = "raydium_amm_v4"
+
+[[pools]]
+address = "<METEORA_DLMM_USDC_X_PAIR>"
+kind = "meteora_dlmm"
+
+[[pools]]
+address = "<RAYDIUM_OR_DLMM_X_SOL_POOL>"
+kind = "raydium_amm_v4"

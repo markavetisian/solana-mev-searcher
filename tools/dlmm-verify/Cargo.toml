@@ -1,0 +1,47 @@
+# Ground-truth check of the searcher's DLMM quote math against the real lb_clmm program in LiteSVM.
+# Standalone (not part of the main build). Usage:
+#   git clone --depth 1 https://github.com/MeteoraAg/dlmm-sdk /tmp/dlmm-sdk
+#   cargo run --release --manifest-path tools/dlmm-verify/Cargo.toml -- /tmp/dlmm-sdk
+[package]
+name = "dlmm-verify"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+litesvm = "=0.17.0"
+solana-account-v4 = { package = "solana-account", version = "4" }
+solana-address-v2 = { package = "solana-address", version = "~2.7" }
+solana-instruction-v3 = { package = "solana-instruction", version = "~3.5" }
+solana-keypair-v3 = { package = "solana-keypair", version = "3" }
+solana-signer-v3 = { package = "solana-signer", version = "3" }
+solana-transaction-v4 = { package = "solana-transaction", version = "4" }
+solana-clock-v3 = { package = "solana-clock", version = "~3.2" }
+
+# Everything below mirrors the searcher's Cargo.toml so `src/main.rs` compiles in-crate.
+solana-sdk = "=5.0.0"
+yellowstone-grpc-client = "=14.0.1"
+yellowstone-grpc-proto = { version = "=13.0.0", default-features = false, features = ["tonic"] }
+tokio = { version = "1.53.2", features = ["rt-multi-thread", "macros", "time", "sync", "signal", "net", "fs", "io-util"] }
+futures = "0.3.34"
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls", "http2"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+toml = "1.1.6"
+anyhow = "1.0.104"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+clap = { version = "4.6.7", features = ["derive"] }
+argon2 = "0.6.0"
+chacha20poly1305 = "0.11.0"
+zeroize = "1.9.0"
+rpassword = "7.5.4"
+rand = "0.10.3"
+bs58 = "0.5.1"
+base64 = "0.23.1"
+mimalloc = { version = "0.1.52", default-features = false }
+
+[profile.release]
+opt-level = 2

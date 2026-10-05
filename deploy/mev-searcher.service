@@ -1,0 +1,31 @@
+[Unit]
+Description=Solana cross-DEX triangular arbitrage searcher
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=mev
+Group=mev
+ExecStart=/usr/local/bin/searcher run --config /etc/mev-searcher/config.toml
+Restart=always
+RestartSec=1
+# Kill switch exits 42: never auto-restart into a drained wallet.
+RestartPreventExitStatus=42
+LoadCredential=mev-key-passphrase:/etc/mev-searcher/passphrase
+EnvironmentFile=-/etc/mev-searcher/env
+Environment=RUST_LOG=info
+LimitNOFILE=65536
+Nice=-5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+ReadOnlyPaths=/etc/mev-searcher
+
+[Install]
+WantedBy=multi-user.target
